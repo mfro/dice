@@ -307,14 +307,9 @@ export function initDice(canvas: HTMLCanvasElement, results: Ref<null | number[]
       world.step(1 / 60);
 
       for (const o of objects) {
-        if (o.body.type == Body.STATIC) {
-          o.body.velocity.setZero();
-          o.body.angularVelocity.setZero();
-        } else {
-          Die.update(o);
-          if (Die.resolve(o)) {
-            o.body.type = Body.STATIC;
-          }
+        Die.update(o);
+        if (Die.resolve(o)) {
+          o.body.type = Body.STATIC;
         }
       }
 

@@ -104,7 +104,7 @@ export namespace Die {
     let velocity = o.body.velocity.lengthSquared();
     let face = o.die.model.faces.find(f => o.body.quaternion.vmult(f.normal).dot(Vec3.UNIT_Y) < -0.99);
 
-    if (spin < 0.001 && velocity < 0.001 && face !== undefined) {
+    if ((o.body.type == Body.STATIC || spin < 0.001 && velocity < 0.001) && face !== undefined) {
       return face;
     } else {
       return null;
@@ -397,6 +397,13 @@ function defineDieTexture(m: Model, fn: (ctx: CanvasRenderingContext2D, face: (t
     const context = canvas.getContext('2d');
     assert(context != null, 'context');
 
+    context.fillStyle = '#333';
+    context.fillRect(0, 0, m.faces.length * 512, 512);
+
+    context.fillStyle = 'red';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+
     fn(context, (text, face, rotation, offset) => {
       context.translate(256 + 512 * face, 256);
       context.rotate(rotation * Math.PI);
@@ -438,13 +445,7 @@ export const d4Model = defineDieModel(4, scale => {
 export const d4Shape = defineDieShape(d4Model);
 
 export const d4Texture = defineDieTexture(d4Model, (ctx, face) => {
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, 0, 4 * 512, 512);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.font = 'bold 130px Roboto';
-  ctx.fillStyle = 'red';
 
   face('1', 0, 0, -125);
   face('2', 0, 2 / 3, -125);
@@ -487,13 +488,7 @@ export const d6Model = defineDieModel(6, scale => {
 export const d6Shape = defineDieShape(d6Model);
 
 export const d6Texture = defineDieTexture(d6Model, (ctx, face) => {
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, 0, 6 * 512, 512);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.font = 'bold 240px Roboto';
-  ctx.fillStyle = 'red';
 
   face('1', 0, 3 / 4, 20);
   face('2', 2, 1 / 4, 20);
@@ -529,13 +524,7 @@ export const d8Model = defineDieModel(8, scale => {
 export const d8Shape = defineDieShape(d8Model);
 
 export const d8Texture = defineDieTexture(d8Model, (ctx, face) => {
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, 0, 8 * 512, 512);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.font = 'bold 200px Roboto';
-  ctx.fillStyle = 'red';
 
   face('1', 0, 4 / 3, 0);
   face('2', 1, 4 / 3, 0);
@@ -601,13 +590,7 @@ export const d10Model = defineDieModel(10, scale => {
 export const d10Shape = defineDieShape(d10Model);
 
 export const d10Texture = defineDieTexture(d10Model, (ctx, face) => {
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, 0, 10 * 512, 512);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.font = 'bold 160px Roboto';
-  ctx.fillStyle = 'red';
 
   face('1', 0, 0, 0);
   face('2', 8, 1, 0);
@@ -668,13 +651,7 @@ export const d12Shape = defineDieShape(d12Model);
 export const d12Geometry = defineDieGeometry(d12Model);
 
 export const d12Texture = defineDieTexture(d12Model, (ctx, face) => {
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, 0, 12 * 512, 512);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.font = 'bold 240px Roboto';
-  ctx.fillStyle = 'red';
 
   face('1', 0, 0, 20);
   face('2', 2, 8 / 5, 20);
@@ -726,13 +703,7 @@ export const d20Shape = defineDieShape(d20Model);
 export const d20Geometry = defineDieGeometry(d20Model);
 
 export const d20Texture = defineDieTexture(d20Model, (ctx, face) => {
-  ctx.fillStyle = '#333';
-  ctx.fillRect(0, 0, 20 * 512, 512);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.font = 'bold 180px Roboto';
-  ctx.fillStyle = 'red';
 
   face('1', 0, 0, 35);
   face('2', 12, 0, 35);
