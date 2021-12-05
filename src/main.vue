@@ -1,5 +1,6 @@
 <template>
-  <span>test</span>
+  <span class="fontloader">test</span>
+
   <canvas ref="canvas" />
 
   <span class="results" v-if="results">
@@ -34,7 +35,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-span {
+.fontloader {
   font-family: Roboto;
   font-weight: bold;
   position: absolute;
