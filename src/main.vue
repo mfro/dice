@@ -1,4 +1,5 @@
 <template>
+  <span>test</span>
   <canvas ref="canvas" />
 
   <span class="results" v-if="results">
@@ -33,9 +34,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+span {
+  font-family: Roboto;
+  font-weight: bold;
+  position: absolute;
+  opacity: 0;
+}
+
 canvas {
   width: 100vw;
   height: 100vh;
+  font-family: Roboto;
 }
 
 .results {

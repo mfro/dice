@@ -104,7 +104,7 @@ export namespace Die {
     let velocity = o.body.velocity.lengthSquared();
     let face = o.die.model.faces.find(f => o.body.quaternion.vmult(f.normal).dot(Vec3.UNIT_Y) < -0.99);
 
-    if ((o.body.type == Body.STATIC || spin < 0.001 && velocity < 0.001) && face !== undefined) {
+    if ((o.body.type == Body.STATIC || spin < 0.0001 && velocity < 0.0001) && face !== undefined) {
       return face;
     } else {
       return null;
