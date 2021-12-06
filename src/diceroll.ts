@@ -334,10 +334,8 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
       active = objects.some(o => o.body.type != Body.STATIC);
 
       if (!active) {
-        results.value = objects.map(o => o.die.results[o.die.model.faces.indexOf(Die.resolve(o)!)]);
+        results.value = objects.map(o => Die.resolve(o)!);
       }
-      // const results = objects.map(o => Die.resolve(o));
-      // active = results.some(e => e == null);
     }
 
     // orbit.update();
@@ -347,10 +345,6 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
 
   requestAnimationFrame(render);
 }
-
-import vertexShader from './shaders/vertex.glsl';
-import fragmentShader from './shaders/fragment.glsl';
-
 
 export function initDiceInspector(canvas: HTMLCanvasElement) {
   const dice = loadDice();
