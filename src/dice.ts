@@ -502,7 +502,7 @@ export const d4Texture = defineDieTexture(d4Model, (ctx, face) => {
 
 export const d4Geometry = defineDieGeometry(d4Model);
 
-export const d4Results = [2, 3, 4, 1];
+export const d4Results = [4, 2, 3, 1];
 
 export const d4 = defineDie(d4Model, d4Shape, d4Texture, d4Geometry, d4Results);
 
