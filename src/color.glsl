@@ -1,10 +1,3 @@
-const vec3 lightDir = normalize(vec3(2.0, 3.0, -1.0));
-const vec3 lightColor = vec3(1.0, 1.0, 1.0);
-
-varying vec3 mPosition;
-varying vec3 wPosition;
-varying vec3 wNormal;
-
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
@@ -37,7 +30,7 @@ float ulerp(float x0, float x1, float x) {
 
 struct GradientStop { float value; vec3 color; };
 
-vec3 gradient(float value, GradientStop stops[4]) {
+vec3 gradient(float value, GradientStop stops[5]) {
   int index = 0;
   while (value > stops[index + 1].value) index += 1;
 
@@ -45,29 +38,20 @@ vec3 gradient(float value, GradientStop stops[4]) {
   return mix(stops[index].color, stops[index + 1].color, v);
 }
 
-void main(void) {
-  vec3 viewDir = normalize(cameraPosition - wPosition);
-  vec3 reflectDir = reflect(-lightDir, normalize(wNormal));
+vec4 mfroColorMap() {
+  float value = noise(mPosition * 2.4);
 
-  float value = noise(mPosition * 4.0);
-  float split = 0.5;
+  vec3 c0 = vec3(0.0, 0.0, 0.0);
+  vec3 c1 = vec3(0.3, 0.3, 0.3);
+  vec3 c2 = vec3(0.4, 0.4, 0.4);
 
-  vec3 c0 = vec3(0.1, 0.1, 0.1);
-  vec3 c1 = vec3(89.0, 60.0, 143.0) / 255.0;
-  vec3 c2 = vec3(2.0, 128.0, 144.0) / 255.0;
-
-  vec3 color = gradient(value, GradientStop[4] (
+  vec3 color = gradient(value, GradientStop[5] (
     GradientStop(0.0, c0),
-    GradientStop(0.49, c1),
-    GradientStop(0.51, c2),
+    GradientStop(0.44, c1),
+    GradientStop(0.5, c2),
+    GradientStop(0.56, c1),
     GradientStop(1.0, c0)
   ));
 
-  vec3 white = vec3(1.0, 1.0, 1.0);
-
-  vec3 ambient = color * 0.4;
-  vec3 diffuse = color * 0.6 * max(0.0, dot(lightDir, normalize(wNormal)));
-  vec3 specular = white * 0.6 * pow(max(0.0, dot(viewDir, reflectDir)), 32.0);
-
-  gl_FragColor = vec4((ambient + diffuse + specular), 1.0);
+  return vec4(color, 1.0);
 }

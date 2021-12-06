@@ -1,11 +1,10 @@
 import { assert } from '@mfro/ts-common/assert';
 import { Vec3, Quaternion as Quat, ConvexPolyhedron, Shape, Body } from 'cannon-es';
-import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial, MixOperation } from 'three';
-
-import vertexShader from './shaders/vertex.glsl';
-import fragmentShader from './shaders/fragment.glsl';
+import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial, MixOperation, UniformsUtils, ShaderLib } from 'three';
 
 type Random = () => number;
+
+type GeometryFn = (rounding: number, edgeDetail: number) => BufferGeometry[];
 
 export interface Vertex {
   point: Vec3;
@@ -50,39 +49,31 @@ export interface Die {
   results: number[];
 }
 
+import colorShader from './color.glsl';
 export namespace Die {
   export function createObject(die: Die) {
-    const mat = new ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-    });
-
-    const material2 = new MeshPhysicalMaterial({
+    const material = new MeshPhysicalMaterial({
       map: die.texture,
-      // transparent: true,
-      depthTest: true,
-      depthWrite: true,
       visible: true,
-      roughness: 0.6,
-      metalness: 0.4,
-      clearcoat: 1,
-      clearcoatRoughness: 0.6,
+      roughness: 0.5,
+      metalness: 0.1,
       reflectivity: 1,
     });
 
-    const material1 = new MeshStandardMaterial({
-      map: die.texture,
-      transparent: true,
-    });
+    material.onBeforeCompile = (shader, renderer) => {
+      shader.vertexShader = 'varying vec3 mPosition;\n' + shader.vertexShader;
+      shader.fragmentShader = 'varying vec3 mPosition;\n' + colorShader + shader.fragmentShader;
+
+      shader.vertexShader = shader.vertexShader
+        .replace('void main() {', `void main() {\n  mPosition = position;`);
+
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <map_fragment>', 'vec4 texelColor = texture2D( map, vUv ); texelColor = mapTexelToLinear( texelColor ); vec4 mfroColor = mfroColorMap(); diffuseColor.a = texelColor.a + mfroColor.a * (1.0 - texelColor.a); diffuseColor.rgb = (mfroColor.rgb * (1.0 - texelColor.a) + texelColor.rgb * texelColor.a) / diffuseColor.a;');
+    };
 
     const object = new Group();
-    // object.add(...die.geometry.map(g => {
-    //   const mesh = new Mesh(g, mat);
-    //   mesh.castShadow = true;
-    //   return mesh;
-    // }));
     object.add(...die.geometry.map(g => {
-      const mesh = new Mesh(g, material2);
+      const mesh = new Mesh(g, material);
       mesh.castShadow = true;
       return mesh;
     }));
@@ -152,16 +143,6 @@ export interface DieObject {
   body: Body;
 }
 
-interface GeometryFn {
-  (rounding: number, edgeDetail: number): [TextureInfo, BufferGeometry[]]
-};
-
-interface TextureInfo {
-  width: number;
-  height: number;
-  faces: [Vec3, Vector2][][];
-}
-
 export function randomQuaternion(random: Random) {
   const u = random();
   const v = random();
@@ -177,12 +158,6 @@ export function randomQuaternion(random: Random) {
 
 function defineDieGeometry(m: Model): GeometryFn {
   return (rounding, edgeDetail) => {
-    const tex: TextureInfo = {
-      width: 0,
-      height: 0,
-      faces: [],
-    };
-
     function angleCCW(p1: Vec3, p2: Vec3, origin: Vec3, normal: Vec3) {
       const v1 = p1.vsub(origin);
       const v2 = p2.vsub(origin);
@@ -208,8 +183,7 @@ function defineDieGeometry(m: Model): GeometryFn {
       });
     }
 
-    const allFaces: [Vec3, Vector2][][] = [];
-    const allNormals: Vec3[] = [];
+    const allFaces: [Vec3, Vec3, Vector2][][] = [];
 
     const vertexCenters = m.vertices.map(v => {
       const A = new Matrix3().set(
@@ -247,31 +221,26 @@ function defineDieGeometry(m: Model): GeometryFn {
         q1.slerp(q2, i / edgeDetail, q);
         const v11 = o1.vadd(q.vmult(edge.faces[0].normal.scale(rounding)));
         const v21 = o2.vadd(q.vmult(edge.faces[0].normal.scale(rounding)));
+        const normal1 = q.vmult(edge.faces[0].normal);
 
         q1.slerp(q2, (i + 1) / edgeDetail, q);
         const v12 = o1.vadd(q.vmult(edge.faces[0].normal.scale(rounding)));
         const v22 = o2.vadd(q.vmult(edge.faces[0].normal.scale(rounding)));
+        const normal2 = q.vmult(edge.faces[0].normal);
 
         q1.slerp(q2, (i + 0.5) / edgeDetail, q);
         const normal = q.vmult(edge.faces[0].normal);
 
-        let t0 = tex.width;
-        tex.width += Math.ceil(width * 100) / 100;
-        tex.height = Math.max(tex.height, height);
+        const points = [v11, v21, v22, v12];
+        const normals = [normal1, normal1, normal2, normal2];
 
-        const points = sortCCW([v11, v21, v22, v12], normal);
-        const uvs = [
-          new Vector2(t0, 0),
-          new Vector2(t0, height),
-          new Vector2(t0 + width, height),
-          new Vector2(t0 + width, 0),
-        ];
-        // if (points[0] != v11) uvs.reverse();
-        const vertices: [Vec3, Vector2][] = points.map((p, i) => [p, uvs[i]]);
+        const test = v21.vsub(v11).cross(v12.vsub(v11));
+        if (test.dot(normal) < 0) {
+          points.reverse();
+          normals.reverse();
+        }
 
-        tex.faces.push(vertices);
-        allFaces.push(vertices);
-        allNormals.push(normal);
+        allFaces.push(points.map((p, i) => [p, normals[i], new Vector2]));
       }
     }
 
@@ -297,25 +266,15 @@ function defineDieGeometry(m: Model): GeometryFn {
       const min = offsets.reduce((min, v) => new Vector2(Math.min(min.x, v[1].x), Math.min(min.y, v[1].y)), new Vector2);
       const max = offsets.reduce((max, v) => new Vector2(Math.max(max.x, v[1].x), Math.max(max.y, v[1].y)), new Vector2);
 
-      const width = max.x - min.x;
-      const height = max.y - min.y;
-      const t0 = tex.width;
-      tex.width += Math.ceil(width * 100) / 100;
-      tex.height = Math.max(tex.height, height);
-
       const range = Math.max(-min.x, -min.y, max.x, max.y);
 
       for (const o of offsets) {
-        o[1].x = t0 + o[1].x - min.x;
-        o[1].y = o[1].y - min.y;
-        // o[1].multiplyScalar(1 / range);
-        // o[1].x = (o[1].x / 2 + 0.5 + i) / m.faces.length;
-        // o[1].y = o[1].y / 2 + 0.5;
+        o[1].multiplyScalar(1 / range);
+        o[1].x = (o[1].x / 2 + 0.5 + i) / m.faces.length;
+        o[1].y = o[1].y / 2 + 0.5;
       }
 
-      tex.faces.push(offsets);
-      allFaces.push(offsets);
-      allNormals.push(m.faces[i].normal);
+      allFaces.push(offsets.map(v => [v[0], m.faces[i].normal, v[1]]));
     }
 
     const threeTextures: number[] = [];
@@ -326,10 +285,10 @@ function defineDieGeometry(m: Model): GeometryFn {
     for (let i = 0; i < allFaces.length; ++i) {
       const i0 = threeVertices.length / 3;
 
-      for (const [v, uv] of allFaces[i]) {
+      for (const [v, n, uv] of allFaces[i]) {
         threeVertices.push(v.x, v.y, v.z);
-        threeTextures.push(uv.x / tex.width, 1 - uv.y / tex.height);
-        threeNormals.push(allNormals[i].x, allNormals[i].y, allNormals[i].z);
+        threeTextures.push(uv.x, uv.y);
+        threeNormals.push(n.x, n.y, n.z);
       }
 
       threeFaces.push(i0, i0 + 1, i0 + 2);
@@ -356,7 +315,7 @@ function defineDieGeometry(m: Model): GeometryFn {
       geometries.push(sphere);
     }
 
-    return [tex, geometries];
+    return geometries;
   };
 }
 
@@ -470,9 +429,9 @@ function defineDieTexture(m: Model, fn: (ctx: CanvasRenderingContext2D, face: (t
     const context = canvas.getContext('2d');
     assert(context != null, 'context');
 
-    context.fillStyle = '#333';
-    context.fillRect(0, 0, m.faces.length * 512, 512);
-    // context.clearRect(0, 0, m.faces.length * 512, 512);
+    // context.fillStyle = '#333';
+    // context.fillRect(0, 0, m.faces.length * 512, 512);
+    context.clearRect(0, 0, m.faces.length * 512, 512);
 
     context.fillStyle = '#eee';
     context.textAlign = 'center';
@@ -491,11 +450,10 @@ function defineDieTexture(m: Model, fn: (ctx: CanvasRenderingContext2D, face: (t
   };
 }
 
-function defineDie(model: Model, shape: Shape, textureFn: (tex: TextureInfo) => Texture, geometryFn: GeometryFn, results: number[]) {
+function defineDie(model: Model, shape: Shape, textureFn: () => Texture, geometryFn: GeometryFn, results: number[]) {
   return (rounding: number, edgeDetail: number): Die => {
-    const [textureInfo, geometry] = geometryFn(rounding, edgeDetail);
-    // const texture = textureFn(textureInfo);
-    const texture = generateTexture(textureInfo);
+    const texture = textureFn();
+    const geometry = geometryFn(rounding, edgeDetail);
 
     return { model, shape, texture, geometry, results };
   };
@@ -809,129 +767,3 @@ export const d20Texture = defineDieTexture(d20Model, (ctx, face) => {
 export const d20Results = [20, 18, 14, 4, 2, 5, 12, 15, 3, 9, 16, 6, 19, 17, 7, 1, 11, 8, 13, 10];
 
 export const d20 = defineDie(d20Model, d20Shape, d20Texture, d20Geometry, d20Results);
-
-function test(x: number, y: number, segments: [Vector2, Vector2]) {
-  const t = (x - segments[0].x) / (segments[1].x - segments[0].x);
-  const h = segments[0].y + t * (segments[1].y - segments[0].y);
-  return h >= y;
-}
-
-function area(points: Vector2[]) {
-  assert(points.length == 3, 'triangle');
-  return 0.5 * Math.abs(
-    (points[0].x - points[2].x) * (points[1].y - points[0].y)
-    -
-    (points[0].x - points[1].x) * (points[2].y - points[0].y)
-  );
-}
-
-function generateTexture(i: TextureInfo) {
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(i.width * 100);
-  canvas.height = Math.ceil(i.height * 100);
-
-  const context = canvas.getContext('2d');
-  assert(context != null, 'context');
-
-  const data = new ImageData(canvas.width, canvas.height);
-
-  for (const face of i.faces) {
-    const min = new Vector2(Math.min(...face.map(f => f[1].x)), Math.min(...face.map(f => f[1].y)));
-    const max = new Vector2(Math.max(...face.map(f => f[1].x)), Math.max(...face.map(f => f[1].y)));
-    min.multiplyScalar(100);
-    max.multiplyScalar(100);
-
-    for (let y = Math.floor(min.y); y <= Math.ceil(max.y); ++y) {
-      for (let x = Math.floor(min.x); x <= Math.ceil(max.x); ++x) {
-        const v = new Vector2(x / 100, y / 100);
-
-        for (let i = 1; i + 1 < face.length; ++i) {
-          const tri = [face[0], face[i], face[i + 1]];
-
-          const a = area([v, tri[0][1], tri[1][1]]);
-          const b = area([v, tri[1][1], tri[2][1]]);
-          const c = area([v, tri[0][1], tri[2][1]]);
-          const d = area(tri.map(f => f[1]));
-          if (Math.abs(a + b + c - d) > 1e-6) continue;
-
-          const position = new Vec3(0, 0, 0);
-          position.addScaledVector(a / d, tri[2][0], position);
-          position.addScaledVector(b / d, tri[0][0], position);
-          position.addScaledVector(c / d, tri[1][0], position);
-
-          const color = colorTexture(position);
-          data.data[((y * canvas.width) + x) * 4 + 0] = Math.floor(color.x * 255);
-          data.data[((y * canvas.width) + x) * 4 + 1] = Math.floor(color.y * 255);
-          data.data[((y * canvas.width) + x) * 4 + 2] = Math.floor(color.z * 255);
-          data.data[((y * canvas.width) + x) * 4 + 3] = 255;
-          // data.data[((y * canvas.width) + x) * 4 + 0] = Math.floor(a / d * 255);
-          // data.data[((y * canvas.width) + x) * 4 + 1] = Math.floor(b / d * 255);
-          // data.data[((y * canvas.width) + x) * 4 + 2] = Math.floor(c / d * 255);
-          data.data[((y * canvas.width) + x) * 4 + 3] = 255;
-        }
-
-        // data.data[((y * canvas.width) + x) * 4 + 0] = Math.floor(x / canvas.width * 255);
-        // data.data[((y * canvas.width) + x) * 4 + 1] = Math.floor(y / canvas.height * 255);
-        // data.data[((y * canvas.width) + x) * 4 + 2] = Math.floor(0 * 255);
-        // data.data[((y * canvas.width) + x) * 4 + 3] = 255;
-      }
-    }
-  }
-
-  context.putImageData(data, 0, 0);
-  console.log(canvas.toDataURL());
-
-  return new CanvasTexture(canvas);
-}
-
-function colorTexture(v: Vec3) {
-  // function mod289A(x: number) { return x - Math.floor(x * (1.0 / 289.0)) * 289.0; }
-  // function perm(x: number[]) { return x.map(x => mod289A(((x * 34.0) + 1.0) * x)); }
-
-  // function noise(p: number[]) {
-  //   const a = p.map(p => Math.floor(p));
-  //   let d = p.map((p, i) => p - a[i]);
-  //   d = d.map(d => d * d * (3 - 2 * d));
-
-  //   const b = [a[0], a[0] + 1, a[1], a[1] + 1];
-  //   const k1 = perm([b[0], b[1], b[0], b[1]]);
-  //   const k2 = perm([k1[0] + b[2], k1[1] + b[2], k1[0] + b[3], k1[1] + b[3]]);
-
-  //   const c = k2.map(v => v + a[2]);
-  //   const k3 = perm(c);
-  //   const k4 = perm(c.map(v => v + 1));
-
-  //   const o1 = k3.map(v => (v / 41) % 1);
-  //   const o2 = k4.map(v => (v / 41) % 1);
-
-  //   const o3 = o1.map((v, i) => o2[i] * d[2] + v * (1 - d[2]));
-  //   const o4 = [o3[1] * d[0] + o3[0] * (1 - d[0]), o3[3] * d[0] + o3[2] * (1 - d[0])];
-
-  //   return o4[1] * o4[1] + o4[0] * (1 - d[1]);
-  // }
-
-  function gradient(value: number, stops: [number, Vec3][]) {
-    let index = 0;
-    while (value > stops[index + 1][0]) index += 1;
-
-    const v = (value - stops[index][0]) * 1 / (stops[index + 1][0] - stops[index][0]);
-    const result = new Vec3();
-    stops[index][1].lerp(stops[index + 1][1], v, result);
-    return result;
-  }
-
-  const c0 = new Vec3(0.1, 0.1, 0.1);
-  const c1 = new Vec3(89.0, 60.0, 143.0).scale(1 / 255.0);
-  const c2 = new Vec3(2.0, 128.0, 144.0).scale(1 / 255.0);
-
-  const value = Math.max(Math.min(noise.simplex3(v.x * 4, v.y * 4, v.z * 4), 1), 0);
-
-  return gradient(value, [
-    [0, c0],
-    [0.49, c1],
-    [0.51, c2],
-    [1, c0],
-  ]);
-}
-
-import * as noise from './noise.js';

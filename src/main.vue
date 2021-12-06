@@ -27,8 +27,8 @@ export default {
 
     watch([canvas, loaded], ([canvas, loaded]) => {
       if (!loaded || !canvas) return;
-      // initDiceRoller(canvas, results);
-      initDiceInspector(canvas);
+      initDiceRoller(canvas, results);
+      // initDiceInspector(canvas);
     });
 
     return {

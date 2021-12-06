@@ -24,12 +24,12 @@ interface Picker {
 
 function loadDice() {
   return {
-    // d4: d4(0.05, 20),
-    d6: d6(0.09, 20),
-    // d8: d8(0.09, 20),
-    // d10: d10(0.09, 20),
-    // d12: d12(0.09, 20),
-    // d20: d20(0.09, 20),
+    d4: d4(0.05, 5),
+    d6: d6(0.09, 5),
+    d8: d8(0.09, 5),
+    d10: d10(0.09, 5),
+    d12: d12(0.09, 5),
+    d20: d20(0.09, 5),
   };
 }
 
@@ -53,7 +53,7 @@ function rollDie(position: Vec3): DieRoll {
 
 function initScene(canvas: HTMLCanvasElement) {
   const scene = new Scene();
-  const camera = new OrthographicCamera(-canvas.width / 200, canvas.width / 200, canvas.height / 200, -canvas.height / 200);
+  const camera = new OrthographicCamera(-canvas.width / 300, canvas.width / 300, canvas.height / 300, -canvas.height / 300);
   camera.position.set(0, 100, 0);
   camera.lookAt(0, 0, 0);
 
@@ -346,9 +346,14 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
   requestAnimationFrame(render);
 }
 
-let existing: null | (() => void) = null;
+declare global {
+  interface Window {
+    diceCleanup?: () => void;
+  }
+}
+
 export function initDiceInspector(canvas: HTMLCanvasElement) {
-  if (existing) existing();
+  window.diceCleanup?.();
 
   const dice = loadDice();
 
@@ -424,18 +429,9 @@ export function initDiceInspector(canvas: HTMLCanvasElement) {
 
   let request = requestAnimationFrame(render);
 
-  existing = () => {
+  window.diceCleanup = () => {
     cancelAnimationFrame(request);
     renderer.dispose();
     orbit.dispose();
   };
-
-  // const mat = new ShaderMaterial({
-  //   vertexShader,
-  //   fragmentShader,
-  // });
-
-  // const mesh = new Mesh(new SphereGeometry(2), mat);
-  // scene.add(mesh);
-  // mesh.position.set(0, 10, 0);
 }
