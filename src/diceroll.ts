@@ -1,6 +1,6 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Body, ContactMaterial, Material, Plane, Vec3, World, Quaternion as Quat } from 'cannon-es';
-import { AmbientLight, DirectionalLight, Mesh, Object3D, OrthographicCamera, PCFSoftShadowMap, PlaneGeometry, Quaternion, Scene, ShadowMaterial, Vector2, Vector3, WebGLRenderer } from 'three';
+import { AmbientLight, DirectionalLight, Mesh, Object3D, OrthographicCamera, PCFSoftShadowMap, PlaneGeometry, Quaternion, Scene, ShaderMaterial, ShadowMaterial, SphereGeometry, Vector2, Vector3, WebGLRenderer } from 'three';
 
 import { DieRoll, DieObject, Die, d4, d6, d8, d10, d12, d20, randomQuaternion } from './dice';
 import { Ref } from 'vue';
@@ -71,7 +71,7 @@ function initScene(canvas: HTMLCanvasElement) {
   const halfDiagonal = Math.sqrt(camera.right * camera.right + camera.top * camera.top);
 
   const directionalLight1 = new DirectionalLight(0xFFFFFF, 0.6);
-  directionalLight1.position.set(2, 3, -1);
+  directionalLight1.position.set(2, 4, -1);
   directionalLight1.shadow.mapSize.width = 4 * canvas.width;
   directionalLight1.shadow.mapSize.height = 4 * canvas.height;
   directionalLight1.shadow.camera.near = -2 * halfDiagonal;
@@ -151,9 +151,7 @@ function initWorld(viewport: Vector2) {
   return { world, walls, floor };
 }
 
-export function initDice(canvas: HTMLCanvasElement, results: Ref<null | number[]>): any {
-  if (document.readyState != 'complete') return window.addEventListener('load', () => initDice(canvas, results));
-
+export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | number[]>): any {
   const dice = loadDice();
 
   const box = canvas.getBoundingClientRect();
@@ -348,4 +346,88 @@ export function initDice(canvas: HTMLCanvasElement, results: Ref<null | number[]
   }
 
   requestAnimationFrame(render);
+}
+
+import vertexShader from './shaders/vertex.glsl';
+import fragmentShader from './shaders/fragment.glsl';
+
+
+export function initDiceInspector(canvas: HTMLCanvasElement) {
+  const dice = loadDice();
+
+  const box = canvas.getBoundingClientRect();
+  canvas.width = box.width;
+  canvas.height = box.height;
+
+  const { scene, camera, renderer } = initScene(canvas);
+
+  const orbit = new OrbitControls(camera, canvas);
+
+  const allDice = Reflect.ownKeys(dice).map(k => dice[k as keyof Dice]);
+  const pickers = allDice.map((die, i) => {
+    const position = new Vector2(
+      5 * ((i % 3) - 1),
+      i < 3 ? 2.5 : -2.5,
+    );
+
+    const object = Die.createObject(die);
+
+    const rotation = new Quaternion().setFromUnitVectors(
+      new Vector3(die.model.faces[0].normal.x, die.model.faces[0].normal.y, die.model.faces[0].normal.z),
+      new Vector3(0, -1, 0)
+    );
+
+    const center = new Vec3();
+    for (const v of die.model.faces[0].vertices) center.vadd(v.point, center);
+    center.scale(1 / die.model.faces[0].vertices.length, center);
+
+    const b = new Vector3();
+    b.copy(die.model.faces[0].vertices[1].point as any);
+    b.sub(center as any);
+    b.normalize();
+    b.applyQuaternion(rotation);
+
+    const q = new Quaternion();
+    if (die.model.faces.length == 6)
+      q.setFromAxisAngle(new Vector3(0, 1, 0), Math.PI * 5 / 4);
+
+    else if (die.model.faces.length == 8)
+      q.setFromAxisAngle(new Vector3(0, 1, 0), Math.PI * 2 / 3);
+
+    q.multiply(new Quaternion().setFromUnitVectors(b, new Vector3(0, 0, 1)));
+    q.multiply(rotation);
+    q.normalize();
+
+    object.quaternion.copy(q);
+    object.scale.set(3, 3, 3);
+    object.position.set(position.x, center.length() * 3, position.y);
+    scene.add(object);
+
+    return {
+      die,
+      object,
+      position,
+      orientation: q,
+      rotation: 0,
+    };
+  });
+
+  orbit.addEventListener('change', () => requestAnimationFrame(render));
+
+  let active = false;
+  function render() {
+    renderer.render(scene, camera);
+  }
+
+  requestAnimationFrame(render);
+
+
+  // const mat = new ShaderMaterial({
+  //   vertexShader,
+  //   fragmentShader,
+  // });
+
+  // const mesh = new Mesh(new SphereGeometry(2), mat);
+  // scene.add(mesh);
+  // mesh.position.set(0, 10, 0);
 }

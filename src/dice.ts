@@ -1,6 +1,9 @@
 import { assert } from '@mfro/ts-common/assert';
 import { Vec3, Quaternion as Quat, ConvexPolyhedron, Shape, Body } from 'cannon-es';
-import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh } from 'three';
+import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial } from 'three';
+
+import vertexShader from './shaders/vertex.glsl';
+import fragmentShader from './shaders/fragment.glsl';
 
 type Random = () => number;
 
@@ -49,13 +52,37 @@ export interface Die {
 
 export namespace Die {
   export function createObject(die: Die) {
-    const material = new MeshStandardMaterial({
+    const mat = new ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+    });
+
+    const material2 = new MeshPhysicalMaterial({
       map: die.texture,
+      // transparent: true,
+      depthTest: true,
+      depthWrite: true,
+      visible: true,
+      roughness: 0.6,
+      metalness: 0.4,
+      clearcoat: 1,
+      clearcoatRoughness: 0.6,
+      reflectivity: 1,
+    });
+
+    const material1 = new MeshStandardMaterial({
+      map: die.texture,
+      transparent: true,
     });
 
     const object = new Group();
+    // object.add(...die.geometry.map(g => {
+    //   const mesh = new Mesh(g, mat);
+    //   mesh.castShadow = true;
+    //   return mesh;
+    // }));
     object.add(...die.geometry.map(g => {
-      const mesh = new Mesh(g, material);
+      const mesh = new Mesh(g, material2);
       mesh.castShadow = true;
       return mesh;
     }));
@@ -399,8 +426,9 @@ function defineDieTexture(m: Model, fn: (ctx: CanvasRenderingContext2D, face: (t
 
     context.fillStyle = '#333';
     context.fillRect(0, 0, m.faces.length * 512, 512);
+    // context.clearRect(0, 0, m.faces.length * 512, 512);
 
-    context.fillStyle = 'red';
+    context.fillStyle = '#eee';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
 

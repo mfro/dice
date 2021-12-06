@@ -22,6 +22,14 @@ module.exports = {
     resolve: {
       symlinks: false,
     },
+    module: {
+      rules: [
+        {
+          test: /\.glsl$/,
+          loader: 'raw-loader',
+        }
+      ],
+    },
   },
 
   chainWebpack: config => {

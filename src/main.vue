@@ -14,7 +14,7 @@
 <script>
 import { shallowRef, watch } from 'vue';
 
-import { initDice } from './diceroll';
+import { initDiceRoller, initDiceInspector } from './diceroll';
 
 export default {
   name: 'dnd-dice',
@@ -23,7 +23,8 @@ export default {
     const results = shallowRef(null);
 
     watch(canvas, canvas => {
-      initDice(canvas, results);
+      initDiceRoller(canvas, results);
+      // initDiceInspector(canvas);
     });
 
     return {
