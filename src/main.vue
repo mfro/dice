@@ -1,5 +1,5 @@
 <template>
-  <span class="fontloader">test</span>
+  <span class="fontloader">0123456789</span>
 
   <canvas ref="canvas" />
 
@@ -20,11 +20,15 @@ export default {
   name: 'dnd-dice',
   setup(props) {
     const canvas = shallowRef(null);
+    const loaded = shallowRef(document.readyState == 'complete');
     const results = shallowRef(null);
 
-    watch(canvas, canvas => {
-      initDiceRoller(canvas, results);
-      // initDiceInspector(canvas);
+    if (!loaded.value) window.addEventListener('load', () => loaded.value = true);
+
+    watch([canvas, loaded], ([canvas, loaded]) => {
+      if (!loaded || !canvas) return;
+      // initDiceRoller(canvas, results);
+      initDiceInspector(canvas);
     });
 
     return {

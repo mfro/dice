@@ -6,12 +6,12 @@ import { DieRoll, DieObject, Die, d4, d6, d8, d10, d12, d20, randomQuaternion } 
 import { Ref } from 'vue';
 
 interface Dice {
-  d4: Die;
+  // d4: Die;
   d6: Die;
-  d8: Die;
-  d10: Die;
-  d12: Die;
-  d20: Die;
+  // d8: Die;
+  // d10: Die;
+  // d12: Die;
+  // d20: Die;
 }
 
 interface Picker {
@@ -24,12 +24,12 @@ interface Picker {
 
 function loadDice() {
   return {
-    d4: d4(0.05, 20),
+    // d4: d4(0.05, 20),
     d6: d6(0.09, 20),
-    d8: d8(0.09, 20),
-    d10: d10(0.09, 20),
-    d12: d12(0.09, 20),
-    d20: d20(0.09, 20),
+    // d8: d8(0.09, 20),
+    // d10: d10(0.09, 20),
+    // d12: d12(0.09, 20),
+    // d20: d20(0.09, 20),
   };
 }
 
@@ -346,7 +346,10 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
   requestAnimationFrame(render);
 }
 
+let existing: null | (() => void) = null;
 export function initDiceInspector(canvas: HTMLCanvasElement) {
+  if (existing) existing();
+
   const dice = loadDice();
 
   const box = canvas.getBoundingClientRect();
@@ -394,7 +397,7 @@ export function initDiceInspector(canvas: HTMLCanvasElement) {
 
     object.quaternion.copy(q);
     object.scale.set(3, 3, 3);
-    object.position.set(position.x, center.length() * 3, position.y);
+    object.position.set(position.x, 3, position.y);
     scene.add(object);
 
     return {
@@ -406,15 +409,26 @@ export function initDiceInspector(canvas: HTMLCanvasElement) {
     };
   });
 
-  orbit.addEventListener('change', () => requestAnimationFrame(render));
-
   let active = false;
-  function render() {
+  function render(time: number) {
+    // const q = new Quaternion();
+    // for (const o of pickers) {
+    //   q.setFromAxisAngle(new Vector3(1, 1, 1), Math.PI / 500);
+    //   q.multiply(o.object.quaternion);
+    //   q.normalize();
+    //   o.object.quaternion.copy(q);
+    // }
     renderer.render(scene, camera);
+    request = requestAnimationFrame(render);
   }
 
-  requestAnimationFrame(render);
+  let request = requestAnimationFrame(render);
 
+  existing = () => {
+    cancelAnimationFrame(request);
+    renderer.dispose();
+    orbit.dispose();
+  };
 
   // const mat = new ShaderMaterial({
   //   vertexShader,
