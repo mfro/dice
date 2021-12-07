@@ -1,6 +1,6 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Body, ContactMaterial, Material, Plane, Vec3, World, Quaternion as Quat } from 'cannon-es';
-import { AmbientLight, DirectionalLight, Mesh, Object3D, OrthographicCamera, PCFSoftShadowMap, PlaneGeometry, Quaternion, Scene, ShaderMaterial, ShadowMaterial, SphereGeometry, Vector2, Vector3, WebGLRenderer } from 'three';
+import { AmbientLight, DirectionalLight, Mesh, MeshPhysicalMaterial, Object3D, OrthographicCamera, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, Quaternion, Scene, ShaderMaterial, ShadowMaterial, SphereGeometry, Vector2, Vector3, WebGLRenderer } from 'three';
 
 import { DieRoll, DieObject, Die, d4, d6, d8, d10, d12, d20, randomQuaternion } from './dice';
 import { Ref } from 'vue';
@@ -53,9 +53,27 @@ function rollDie(position: Vec3): DieRoll {
 
 function initScene(canvas: HTMLCanvasElement) {
   const scene = new Scene();
-  const camera = new OrthographicCamera(-canvas.width / 300, canvas.width / 300, canvas.height / 300, -canvas.height / 300);
-  camera.position.set(0, 100, 0);
+  // const camera = new OrthographicCamera(-canvas.width / 300, canvas.width / 300, canvas.height / 300, -canvas.height / 300);
+  // camera.position.set(0, 100, 0);
+  // camera.lookAt(0, 0, 0);
+
+  const viewport = new Vector2(canvas.width / canvas.height * 9, 9);
+
+  const height = 25;
+  const fov = 2 * Math.atan(viewport.y / 2 / height);
+
+  const camera = new PerspectiveCamera(fov * 180 / Math.PI, viewport.x / viewport.y, 0.1, 1000);
+  camera.position.set(0, height, 0);
   camera.lookAt(0, 0, 0);
+
+  console.log(fov);
+
+  // const viewport = new Vector3(1, -1, -1);
+  // viewport.unproject(camera);
+  // viewport.sub(camera.position);
+  // viewport.normalize();
+  // viewport.multiplyScalar((-camera.position.y + 2) / viewport.y);
+  // viewport.add(camera.position);
 
   const renderer = new WebGLRenderer({
     canvas,
@@ -68,7 +86,7 @@ function initScene(canvas: HTMLCanvasElement) {
   const ambientLight = new AmbientLight(0xFFFFFF, 0.4);
   scene.add(ambientLight);
 
-  const halfDiagonal = Math.sqrt(camera.right * camera.right + camera.top * camera.top);
+  const halfDiagonal = Math.sqrt(viewport.x * viewport.x / 4 + viewport.y * viewport.y / 4);
 
   const directionalLight1 = new DirectionalLight(0xFFFFFF, 0.6);
   directionalLight1.position.set(2, 4, -1);
@@ -83,7 +101,7 @@ function initScene(canvas: HTMLCanvasElement) {
   directionalLight1.castShadow = true;
   scene.add(directionalLight1);
 
-  const tableGeometry = new PlaneGeometry(2 * camera.right, 2 * camera.top);
+  const tableGeometry = new PlaneGeometry(viewport.x, viewport.y);
   const tableMaterial = new ShadowMaterial({ opacity: 0.5 });
   const table = new Mesh(tableGeometry, tableMaterial);
   table.rotateX(-Math.PI / 2);
@@ -91,7 +109,7 @@ function initScene(canvas: HTMLCanvasElement) {
   table.receiveShadow = true;
   scene.add(table);
 
-  return { scene, camera, renderer };
+  return { scene, camera, renderer, viewport };
 }
 
 function initWorld(viewport: Vector2) {
@@ -158,13 +176,12 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
   canvas.width = box.width;
   canvas.height = box.height;
 
-  const { scene, camera, renderer } = initScene(canvas);
-  const viewport = new Vector2(camera.right * 2, camera.top * 2);
+  const { scene, camera, renderer, viewport } = initScene(canvas);
   const { world, floor, walls } = initWorld(viewport);
 
   // const orbit = new OrbitControls(camera, canvas);
 
-  const objects: DieObject[] = [];
+  const objects: (DieObject & { t0: number })[] = [];
 
   const allDice = Reflect.ownKeys(dice).map(k => dice[k as keyof Dice]);
   const pickers = allDice.map((die, i) => {
@@ -174,8 +191,9 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
     );
 
     const object = Die.createObject(die);
-    object.position.set(position.x, 10, position.y);
-    object.scale.set(0.6, 0.6, 0.6);
+    object.position.set(position.x, 0, position.y);
+    object.position.lerp(camera.position, 0.3);
+    object.scale.set(0.5, 0.5, 0.5);
 
     const rotation = new Quaternion().setFromUnitVectors(
       new Vector3(die.model.faces[0].normal.x, die.model.faces[0].normal.y, die.model.faces[0].normal.z),
@@ -236,7 +254,7 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
 
   function add(die: Die, position: Vec3) {
     const o = Die.create(die);
-    objects.push(o);
+    objects.push({ ...o, t0: time });
     scene.add(o.object);
     world.addBody(o.body);
 
@@ -269,11 +287,13 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
     }
 
     active = true;
-    add(pick.die, new Vec3(pick.object.position.x, 5, pick.object.position.z));
+    add(pick.die, new Vec3(pick.object.position.x, pick.object.position.y, pick.object.position.z));
   });
 
+  let time = 0;
   let active = false;
-  function render() {
+  function render(t: number) {
+    time = t;
     canvas.style.cursor = picking ? 'pointer' : 'default';
 
     const axis = new Vector3(3, 1, -3).normalize();
@@ -306,6 +326,11 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
 
       for (const o of objects) {
         Die.update(o);
+
+        const value = Math.min(Math.max((time - o.t0) / 800, 0), 1);
+        const scale = 0.5 + 0.5 * value;
+        o.object.scale.set(scale, scale, scale);
+
         if (Die.resolve(o)) {
           o.body.type = Body.STATIC;
         }

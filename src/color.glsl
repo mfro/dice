@@ -1,3 +1,5 @@
+uniform float time;
+
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
@@ -39,7 +41,7 @@ vec3 gradient(float value, GradientStop stops[5]) {
 }
 
 vec4 mfroColorMap() {
-  float value = noise(mPosition * 2.4);
+  float value = noise(mPosition * 2.4 + time * 0.2);
 
   vec3 c0 = vec3(0.0, 0.0, 0.0);
   vec3 c1 = vec3(0.3, 0.3, 0.3);

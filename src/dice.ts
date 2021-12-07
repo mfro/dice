@@ -1,6 +1,7 @@
 import { assert } from '@mfro/ts-common/assert';
 import { Vec3, Quaternion as Quat, ConvexPolyhedron, Shape, Body } from 'cannon-es';
-import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial, MixOperation, UniformsUtils, ShaderLib } from 'three';
+import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial, MixOperation, UniformsUtils, ShaderLib, Shader, Renderer } from 'three';
+import colorShader from './color.glsl';
 
 type Random = () => number;
 
@@ -49,9 +50,9 @@ export interface Die {
   results: number[];
 }
 
-import colorShader from './color.glsl';
 export namespace Die {
   export function createObject(die: Die) {
+    const shaders = new WeakMap<Renderer, Shader[]>();
     const material = new MeshPhysicalMaterial({
       map: die.texture,
       visible: true,
@@ -61,6 +62,11 @@ export namespace Die {
     });
 
     material.onBeforeCompile = (shader, renderer) => {
+      let list = shaders.get(renderer);
+      if (!list) shaders.set(renderer, list = []);
+      list.push(shader);
+
+      shader.uniforms['time'] = { value: 0 };
       shader.vertexShader = 'varying vec3 mPosition;\n' + shader.vertexShader;
       shader.fragmentShader = 'varying vec3 mPosition;\n' + colorShader + shader.fragmentShader;
 
@@ -77,6 +83,15 @@ export namespace Die {
       mesh.castShadow = true;
       return mesh;
     }));
+
+    object.children[0].onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
+      const list = shaders.get(renderer);
+      if (!list) return;
+
+      for (const shader of list) {
+        shader.uniforms['time'].value += 1 / 60;
+      }
+    };
 
     return object;
   }
