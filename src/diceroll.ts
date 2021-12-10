@@ -66,8 +66,6 @@ function initScene(canvas: HTMLCanvasElement) {
   camera.position.set(0, height, 0);
   camera.lookAt(0, 0, 0);
 
-  console.log(fov);
-
   // const viewport = new Vector3(1, -1, -1);
   // viewport.unproject(camera);
   // viewport.sub(camera.position);

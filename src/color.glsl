@@ -30,24 +30,28 @@ float ulerp(float x0, float x1, float x) {
   return (x - x0) * (1.0 / (x1 - x0));
 }
 
-struct GradientStop { float value; vec3 color; };
+struct GradientStop { float value; vec4 color; };
 
-vec3 gradient(float value, GradientStop stops[5]) {
-  int index = 0;
-  while (value > stops[index + 1].value) index += 1;
-
-  float v = ulerp(stops[index].value, stops[index + 1].value, value);
-  return mix(stops[index].color, stops[index + 1].color, v);
+#define GRADIENT(result, N, VALUE, STOPS){                                \
+  float _v = VALUE;                                                       \
+  GradientStop _s[N] = GradientStop[N] STOPS;                             \
+  int index = 0;                                                          \
+  while (_v > _s[index + 1].value) index += 1;                            \
+                                                                          \
+  float v = ulerp(_s[index].value, _s[index + 1].value, _v);              \
+  result = mix(_s[index].color, _s[index + 1].color, v);                  \
 }
 
-vec4 mfroColorMap() {
+// white on black smoky pattern
+vec4 design0() {
   float value = noise(mPosition * 2.4 + time * 0.2);
 
-  vec3 c0 = vec3(0.0, 0.0, 0.0);
-  vec3 c1 = vec3(0.3, 0.3, 0.3);
-  vec3 c2 = vec3(0.4, 0.4, 0.4);
+  vec4 c0 = vec4(0.0, 0.0, 0.0, 1.0);
+  vec4 c1 = vec4(0.3, 0.3, 0.3, 1.0);
+  vec4 c2 = vec4(0.4, 0.4, 0.4, 1.0);
 
-  vec3 color = gradient(value, GradientStop[5] (
+  vec4 color;
+  GRADIENT(color, 5, value, (
     GradientStop(0.0, c0),
     GradientStop(0.44, c1),
     GradientStop(0.5, c2),
@@ -55,5 +59,69 @@ vec4 mfroColorMap() {
     GradientStop(1.0, c0)
   ));
 
-  return vec4(color, 1.0);
+  return color;
+}
+
+vec4 design1() {
+  float value = noise(mPosition * 4.0 + time * 0.2);
+
+  vec4 c1 = vec4(0.6, 0.6, 1.0, 1.0);
+  vec4 c0 = vec4(c1.rgb, 0.0);
+
+  vec4 color;
+  GRADIENT(color, 3, value, (
+    GradientStop(0.0, c0),
+    GradientStop(0.6, c0),
+    GradientStop(1.0, c1)
+  ));
+
+  return color;
+}
+
+vec4 design2() {
+  float value = noise(mPosition * 4.0 + time * 0.2 + 200.0);
+
+  vec4 c1 = vec4(0.6, 1.0, 0.6, 1.0);
+  vec4 c0 = vec4(c1.rgb, 0.0);
+
+  vec4 color;
+  GRADIENT(color, 3, value, (
+    GradientStop(0.0, c0),
+    GradientStop(0.6, c0),
+    GradientStop(1.0, c1)
+  ));
+
+  return color;
+}
+
+vec4 design3() {
+  float value = noise(mPosition * 4.0 + time * 0.2 + 400.0);
+
+  vec4 c1 = vec4(1.0, 0.6, 0.6, 1.0);
+  vec4 c0 = vec4(c1.rgb, 0.0);
+
+  vec4 color;
+  GRADIENT(color, 3, value, (
+    GradientStop(0.0, c0),
+    GradientStop(0.6, c0),
+    GradientStop(1.0, c1)
+  ));
+
+  return color;
+}
+
+vec4 overlay(vec4 base, vec4 overlay) {
+  float alpha = overlay.a + base.a * (1.0 - overlay.a);
+  vec3 color = (base.rgb * (1.0 - overlay.a) + overlay.rgb * overlay.a) / alpha;
+
+  return vec4(color, alpha);
+}
+
+vec4 mfroColorMap() {
+  vec4 a = design0();
+  // vec4 b = design1();
+  // vec4 c = design2();
+  // vec4 d = design3();
+
+  return a;
 }
