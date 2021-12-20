@@ -291,6 +291,7 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
   let time = 0;
   let active = false;
   function render(t: number) {
+    const delta = t - time;
     time = t;
     canvas.style.cursor = picking ? 'pointer' : 'default';
 
@@ -298,13 +299,13 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
     for (const picker of pickers) {
       if (picker == picking || picker.rotation % 50 != 0) {
         if (picker == picking)
-          picker.rotation += 1;
+          picker.rotation += .06 * delta;
         else if (picker.rotation > 45 || picker.rotation < 5)
           picker.rotation = 0;
         else if (picker.rotation < 25)
-          picker.rotation -= 5;
+          picker.rotation -= .3 * delta;
         else
-          picker.rotation += 5;
+          picker.rotation += .3 * delta;
 
         picker.rotation %= 50;
 
@@ -320,7 +321,7 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
     }
 
     if (active) {
-      world.step(1 / 60);
+      world.step(delta / 1000);
 
       for (const o of objects) {
         Die.update(o);
