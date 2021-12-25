@@ -84,12 +84,16 @@ export namespace Die {
       return mesh;
     }));
 
+    const timestamps = new WeakMap<Shader, number>();
     object.children[0].onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
       const list = shaders.get(renderer);
       if (!list) return;
 
+      const now = performance.now();
       for (const shader of list) {
-        shader.uniforms['time'].value += 1 / 60;
+        const previous = timestamps.get(shader) ?? now;
+        shader.uniforms['time'].value += (previous - now) / 1000;
+        timestamps.set(shader, now);
       }
     };
 
