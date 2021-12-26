@@ -139,7 +139,7 @@ export namespace Die {
   export function resolve(o: DieObject) {
     let spin = o.body.angularVelocity.lengthSquared();
     let velocity = o.body.velocity.lengthSquared();
-    let index = o.die.model.faces.findIndex(f => o.body.quaternion.vmult(f.normal).dot(Vec3.UNIT_Y) < -0.99);
+    let index = o.die.model.faces.findIndex(f => o.body.quaternion.vmult(f.normal).dot(Vec3.UNIT_Y) < -0.999);
 
     if ((o.body.type == Body.STATIC || spin < 0.0001 && velocity < 0.0001) && index !== undefined) {
       return o.die.results[index];
