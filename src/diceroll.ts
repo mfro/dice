@@ -341,7 +341,7 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
 
       for (const [a, b] of bumps) {
         if (a == floor || b == floor) continue;
-        if (done.some(c => a == c[0] && b == c[1] || b == c[0] && a == c[1])) continue;
+        if (done.some(c => a == c(0) && b == c(1) || b == c(0) && a == c(1))) continue;
         done.push([a, b]);
 
         if (walls.includes(a) || walls.includes(b)) {

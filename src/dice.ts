@@ -114,11 +114,11 @@ export namespace Die {
     return { die, body, object };
   }
 
-  export function initRoll(o: DieObject, roll: DieRoll) {
-    o.body.position = roll.position.clone();
-    o.body.quaternion = roll.orientation.clone();
-    o.body.velocity = roll.velocity.clone();
-    o.body.angularVelocity = roll.angularVelocity.clone();
+  export function initRoll(o: DieObject | Body, roll: DieRoll) {
+    ('body' in o ? o.body : o).position = roll.position.clone();
+    ('body' in o ? o.body : o).quaternion = roll.orientation.clone();
+    ('body' in o ? o.body : o).velocity = roll.velocity.clone();
+    ('body' in o ? o.body : o).angularVelocity = roll.angularVelocity.clone();
   }
 
   export function update(o: DieObject) {
@@ -136,12 +136,12 @@ export namespace Die {
     );
   }
 
-  export function resolve(o: DieObject) {
+  export function resolve(o: { body: Body, die: Die }) {
     let spin = o.body.angularVelocity.lengthSquared();
     let velocity = o.body.velocity.lengthSquared();
     let index = o.die.model.faces.findIndex(f => o.body.quaternion.vmult(f.normal).dot(Vec3.UNIT_Y) < -0.999);
 
-    if ((o.body.type == Body.STATIC || spin < 0.0001 && velocity < 0.0001) && index !== undefined) {
+    if ((o.body.type == Body.STATIC || spin < 0.0001 && velocity < 0.0001) && index != -1) {
       return o.die.results[index];
     } else {
       return null;
@@ -164,14 +164,14 @@ export interface DieObject {
 
 export function randomQuaternion(random: Random) {
   const u = random();
-  const v = random();
-  const w = random();
+  const v = 2 * Math.PI * random();
+  const w = 2 * Math.PI * random();
 
   return new Quat(
-    Math.sqrt(1 - u) * Math.sin(2 * Math.PI * v),
-    Math.sqrt(1 - u) * Math.cos(2 * Math.PI * v),
-    Math.sqrt(u) * Math.sin(2 * Math.PI * w),
-    Math.sqrt(u) * Math.cos(2 * Math.PI * w),
+    Math.sqrt(1 - u) * Math.sin(v),
+    Math.sqrt(1 - u) * Math.cos(v),
+    Math.sqrt(u) * Math.sin(w),
+    Math.sqrt(u) * Math.cos(w),
   );
 }
 
