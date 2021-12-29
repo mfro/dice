@@ -51,9 +51,14 @@ export interface Die {
 }
 
 export namespace Die {
-  export function createObject(die: Die) {
-    const shaders = new WeakMap<Renderer, Shader[]>();
-    const material = new MeshPhysicalMaterial({
+  const materials = new Map<Die, MeshPhysicalMaterial>();
+  const shaders = new WeakMap<Renderer, Shader[]>();
+
+  function getMaterial(die: Die) {
+    let material = materials.get(die);
+    if (material) return material;
+
+    material = new MeshPhysicalMaterial({
       map: die.texture,
       visible: true,
       roughness: 0.5,
@@ -77,23 +82,25 @@ export namespace Die {
         .replace('#include <map_fragment>', 'vec4 texelColor = texture2D( map, vUv ); texelColor = mapTexelToLinear( texelColor ); vec4 mfroColor = mfroColorMap(); diffuseColor.a = texelColor.a + mfroColor.a * (1.0 - texelColor.a); diffuseColor.rgb = (mfroColor.rgb * (1.0 - texelColor.a) + texelColor.rgb * texelColor.a) / diffuseColor.a;');
     };
 
+    materials.set(die, material);
+    return material;
+  }
+
+  export function createObject(die: Die) {
     const object = new Group();
     object.add(...die.geometry.map(g => {
-      const mesh = new Mesh(g, material);
+      const mesh = new Mesh(g, getMaterial(die));
       mesh.castShadow = true;
       return mesh;
     }));
 
-    const timestamps = new WeakMap<Shader, number>();
     object.children[0].onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
       const list = shaders.get(renderer);
       if (!list) return;
 
       const now = performance.now();
       for (const shader of list) {
-        const previous = timestamps.get(shader) ?? now;
-        shader.uniforms['time'].value += (previous - now) / 1000;
-        timestamps.set(shader, now);
+        shader.uniforms['time'].value = now / 1000;
       }
     };
 
