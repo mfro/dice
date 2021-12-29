@@ -10,7 +10,7 @@
     "@mfro/ts-common": "mfro/ts-common",
     "cannon-es": "^0.18.0",
     "core-js": "^3.6.5",
-    "three": "^0.135.0",
+    "three": "^0.136.0",
     "vue": "^3.0.0"
   },
   "devDependencies": {
