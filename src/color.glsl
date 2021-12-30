@@ -1,4 +1,5 @@
-uniform float time;
+uniform float uTime;
+uniform vec3 uColor;
 
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
@@ -44,11 +45,18 @@ struct GradientStop { float value; vec4 color; };
 
 // white on black smoky pattern
 vec4 design0() {
-  float value = noise(mPosition * 2.4 + time * 0.2);
+  float value = noise(mPosition * 2.4 + uTime * 0.2);
 
-  vec4 c0 = vec4(0.0, 0.0, 0.0, 1.0);
-  vec4 c1 = vec4(0.3, 0.3, 0.3, 1.0);
-  vec4 c2 = vec4(0.4, 0.4, 0.4, 1.0);
+  vec4 c0 = vec4(uColor * 0.05, 1.0);
+  vec4 c1 = vec4(uColor * 0.1, 1.0);
+  vec4 c2 = vec4(uColor, 1.0);
+  // vec4 c1 = vec4(mix(uColor, vec3(0.0, 0.0, 0.0), 0.2), 1.0);
+  // vec4 c2 = vec4(mix(uColor, vec3(0.0, 0.0, 0.0), 1.0), 1.0);
+  // vec4 c1 = vec4(mix(uColor, vec3(1.0, 1.0, 1.0), 0.1), 1.0);
+  // vec4 c2 = vec4(mix(uColor, vec3(1.0, 1.0, 1.0), 0.2), 1.0);
+  // vec4 c0 = vec4(vec3(0.0, 0.0, 0.0), 1.0);
+  // vec4 c1 = vec4(vec3(0.0, 0.0, 0.0), 1.0);
+  // vec4 c2 = vec4(vec3(0.0, 0.0, 0.0), 1.0);
 
   vec4 color;
   GRADIENT(color, 5, value, (
@@ -63,7 +71,7 @@ vec4 design0() {
 }
 
 vec4 design1() {
-  float value = noise(mPosition * 4.0 + time * 0.2);
+  float value = noise(mPosition * 4.0 + uTime * 0.2);
 
   vec4 c1 = vec4(0.6, 0.6, 1.0, 1.0);
   vec4 c0 = vec4(c1.rgb, 0.0);
@@ -79,7 +87,7 @@ vec4 design1() {
 }
 
 vec4 design2() {
-  float value = noise(mPosition * 4.0 + time * 0.2 + 200.0);
+  float value = noise(mPosition * 4.0 + uTime * 0.2 + 200.0);
 
   vec4 c1 = vec4(0.6, 1.0, 0.6, 1.0);
   vec4 c0 = vec4(c1.rgb, 0.0);
@@ -95,7 +103,7 @@ vec4 design2() {
 }
 
 vec4 design3() {
-  float value = noise(mPosition * 4.0 + time * 0.2 + 400.0);
+  float value = noise(mPosition * 4.0 + uTime * 0.2 + 400.0);
 
   vec4 c1 = vec4(1.0, 0.6, 0.6, 1.0);
   vec4 c0 = vec4(c1.rgb, 0.0);

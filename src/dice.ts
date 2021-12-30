@@ -1,6 +1,6 @@
 import { assert } from '@mfro/ts-common/assert';
 import { Vec3, Quaternion as Quat, ConvexPolyhedron, Shape, Body } from 'cannon-es';
-import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial, MixOperation, UniformsUtils, ShaderLib, Shader, Renderer } from 'three';
+import { BufferGeometry, Object3D, Vector2, BufferAttribute, SphereGeometry, Matrix4, Texture, CanvasTexture, MeshStandardMaterial, Matrix3, Vector3, Group, Mesh, ShaderMaterial, UniformsLib, MeshPhysicalMaterial, MixOperation, UniformsUtils, ShaderLib, Shader, Renderer, Material } from 'three';
 import colorShader from './color.glsl';
 
 type Random = () => number;
@@ -52,7 +52,7 @@ export interface Die {
 
 export namespace Die {
   const materials = new Map<Die, MeshPhysicalMaterial>();
-  const shaders = new WeakMap<Renderer, Shader[]>();
+  const shaders = new WeakMap<Material, Shader[]>();
 
   function getMaterial(die: Die) {
     let material = materials.get(die);
@@ -67,11 +67,12 @@ export namespace Die {
     });
 
     material.onBeforeCompile = (shader, renderer) => {
-      let list = shaders.get(renderer);
-      if (!list) shaders.set(renderer, list = []);
+      let list = shaders.get(material!);
+      if (!list) shaders.set(material!, list = []);
       list.push(shader);
 
-      shader.uniforms['time'] = { value: 0 };
+      shader.uniforms['uTime'] = { value: 0 };
+      shader.uniforms['uColor'] = { value: new Vec3(0, 0, 0) };
       shader.vertexShader = 'varying vec3 mPosition;\n' + shader.vertexShader;
       shader.fragmentShader = 'varying vec3 mPosition;\n' + colorShader + shader.fragmentShader;
 
@@ -80,27 +81,32 @@ export namespace Die {
 
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <map_fragment>', 'vec4 texelColor = texture2D( map, vUv ); texelColor = mapTexelToLinear( texelColor ); vec4 mfroColor = mfroColorMap(); diffuseColor.a = texelColor.a + mfroColor.a * (1.0 - texelColor.a); diffuseColor.rgb = (mfroColor.rgb * (1.0 - texelColor.a) + texelColor.rgb * texelColor.a) / diffuseColor.a;');
+
+      console.log('compile');
     };
 
     materials.set(die, material);
     return material;
   }
 
-  export function createObject(die: Die) {
+  export function createObject(die: Die, color: Vec3) {
+    const material = getMaterial(die);
+
     const object = new Group();
     object.add(...die.geometry.map(g => {
-      const mesh = new Mesh(g, getMaterial(die));
+      const mesh = new Mesh(g, material);
       mesh.castShadow = true;
       return mesh;
     }));
 
     object.children[0].onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
-      const list = shaders.get(renderer);
+      const list = shaders.get(material);
       if (!list) return;
 
       const now = performance.now();
       for (const shader of list) {
-        shader.uniforms['time'].value = now / 1000;
+        shader.uniforms['uTime'].value = now / 1000;
+        shader.uniforms['uColor'].value = color;
       }
     };
 
@@ -114,9 +120,9 @@ export namespace Die {
     });
   }
 
-  export function create(die: Die): DieObject {
+  export function create(die: Die, color: Vec3): DieObject {
     const body = createBody(die);
-    const object = createObject(die);
+    const object = createObject(die, color);
 
     return { die, body, object };
   }
