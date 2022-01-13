@@ -5,6 +5,8 @@ import { AmbientLight, DirectionalLight, Mesh, MeshPhysicalMaterial, Object3D, O
 import { DieRoll, DieObject, Die, d4, d6, d8, d10, d12, d20, randomQuaternion } from './dice';
 import { Ref } from 'vue';
 
+const color = new Vec3(0.35, 0.35, 0.35);
+
 interface Dice {
   // d4: Die;
   d6: Die;
@@ -188,7 +190,7 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
       1 * ((i + 0.5) - allDice.length / 2),
     );
 
-    const object = Die.createObject(die);
+    const object = Die.createObject(die, color);
     object.position.set(position.x, 0, position.y);
     object.position.lerp(camera.position, 0.3);
     object.scale.set(0.5, 0.5, 0.5);
@@ -251,7 +253,7 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
   }
 
   function add(die: Die, position: Vec3) {
-    const o = Die.create(die);
+    const o = Die.create(die, color);
     objects.push({ ...o, t0: time });
     scene.add(o.object);
     world.addBody(o.body);
@@ -396,7 +398,7 @@ export function initDiceInspector(canvas: HTMLCanvasElement) {
       i < 3 ? 2.5 : -2.5,
     );
 
-    const object = Die.createObject(die);
+    const object = Die.createObject(die, color);
 
     const rotation = new Quaternion().setFromUnitVectors(
       new Vector3(die.model.faces[0].normal.x, die.model.faces[0].normal.y, die.model.faces[0].normal.z),
