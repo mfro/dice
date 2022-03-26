@@ -81,8 +81,6 @@ export namespace Die {
 
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <map_fragment>', 'vec4 texelColor = texture2D( map, vUv ); texelColor = mapTexelToLinear( texelColor ); vec4 mfroColor = mfroColorMap(); diffuseColor.a = texelColor.a + mfroColor.a * (1.0 - texelColor.a); diffuseColor.rgb = (mfroColor.rgb * (1.0 - texelColor.a) + texelColor.rgb * texelColor.a) / diffuseColor.a;');
-
-      console.log('compile');
     };
 
     materials.set(die, material);
