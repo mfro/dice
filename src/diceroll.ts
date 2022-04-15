@@ -1,6 +1,6 @@
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Body, ContactMaterial, Material, Plane, Vec3, World, Quaternion as Quat } from 'cannon-es';
-import { AmbientLight, DirectionalLight, Mesh, MeshPhysicalMaterial, Object3D, OrthographicCamera, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, Quaternion, Scene, ShaderMaterial, ShadowMaterial, SphereGeometry, Vector2, Vector3, WebGLRenderer } from 'three';
+import { AmbientLight, DirectionalLight, Mesh, Object3D, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, Quaternion, Scene, ShadowMaterial, Vector2, Vector3, WebGLRenderer } from 'three';
 
 import { DieRoll, DieObject, Die, d4, d6, d8, d10, d12, d20, randomQuaternion } from './dice';
 import { Ref } from 'vue';

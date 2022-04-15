@@ -48,7 +48,7 @@ vec4 design0() {
   float value = noise(mPosition * 2.4 + uTime * 0.2);
 
   vec4 c0 = vec4(uColor * 0.05, 1.0);
-  vec4 c1 = vec4(uColor * 0.1, 1.0);
+  vec4 c1 = vec4(uColor * 0.5, 1.0);
   vec4 c2 = vec4(uColor, 1.0);
   // vec4 c1 = vec4(mix(uColor, vec3(0.0, 0.0, 0.0), 0.2), 1.0);
   // vec4 c2 = vec4(mix(uColor, vec3(0.0, 0.0, 0.0), 1.0), 1.0);
