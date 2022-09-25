@@ -323,7 +323,9 @@ export function initDiceRoller(canvas: HTMLCanvasElement, results: Ref<null | nu
     }
 
     if (active) {
-      world.step(delta / 1000);
+      if (delta > 0) {
+        world.step(delta / 1000);
+      }
 
       for (const o of objects) {
         Die.update(o);
